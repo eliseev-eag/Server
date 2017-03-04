@@ -7,20 +7,27 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using Kontur.GameStats.Server.Models;
 using Ninject.Extensions.Logging;
+using System.Text.RegularExpressions;
+using System;
 
 namespace Kontur.GameStats.Server.Controllers
 {
     public class ServerInfoesController : ApiController
     {
+        private readonly ILogger logger;
+        private DatabaseContext db = new DatabaseContext();
+
+        private const string validIpAddress = @"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])";
+        private const string validPortNumber = @"-([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$";
+        private const string validHostname = @"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])";
+        private Regex validIpAddressRegex = new Regex(validIpAddress + validPortNumber);
+        private Regex validHostnameRegex = new Regex(validHostname + validPortNumber);
+
         public ServerInfoesController(ILogger logger)
         {
             this.logger = logger;
         }
 
-        private readonly ILogger logger;
-        private DatabaseContext db = new DatabaseContext();
-
-        // GET: api/ServerInfoes
         [ResponseType(typeof(IEnumerable<ServerInfo>))]
         [Route("servers/info")]
         [HttpGet]
@@ -30,12 +37,26 @@ namespace Kontur.GameStats.Server.Controllers
             return Ok(db.ServerInfos);
         }
 
-        // GET: api/ServerInfoes/5
         [ResponseType(typeof(ServerInfo))]
         [Route("servers/{endpoint}/info")]
         [HttpGet]
         public IHttpActionResult GetServerInfo(string endpoint)
         {
+            
+            try
+            {
+                if (!validIpAddressRegex.IsMatch(endpoint) && !validHostnameRegex.IsMatch(endpoint))
+                {
+                    logger.Info("GET запрос servers/{0}/info не корректен",endpoint);
+                    return BadRequest();
+                }
+            }
+            catch (ArgumentNullException)
+            {
+                logger.Info("GET запрос servers/{0}/info не корректен", endpoint);
+                return BadRequest();
+            }
+
             ServerInfo serverInfo = db.ServerInfos.Find(endpoint);
             if (serverInfo == null)
             {
@@ -45,20 +66,24 @@ namespace Kontur.GameStats.Server.Controllers
             return Ok(serverInfo);
         }
 
-        // PUT: api/ServerInfoes/5
         [ResponseType(typeof(void))]
         [Route("servers/{endpoint}/info")]
         [HttpPut]
-        public IHttpActionResult SaveServerInfo(string endPoint, ServerInfo advertiseRequest)
+        public IHttpActionResult SaveServerInfo(string endpoint, ServerInfo advertiseRequest)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (!ServerInfoExists(endPoint))
+            if (!validHostnameRegex.IsMatch(endpoint) && !validHostnameRegex.IsMatch(endpoint))
             {
-                ServerInfo serverInfo = new ServerInfo() { Id = endPoint, Name = advertiseRequest.Name };
+                return BadRequest();
+            }
+
+            if (!ServerInfoExists(endpoint))
+            {
+                ServerInfo serverInfo = new ServerInfo() { Id = endpoint, Name = advertiseRequest.Name };
                 /* foreach (string value in advertiseRequest.GameModes)
                  {
                      var findedValue = db.GameModes.Find();
@@ -67,7 +92,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             else
             {
-                var serverInfo = db.ServerInfos.Single(row => row.Id == endPoint);
+                var serverInfo = db.ServerInfos.Single(row => row.Id == endpoint);
                 serverInfo.Name = advertiseRequest.Name;
                 serverInfo.GameModes = advertiseRequest.GameModes;
                 db.Entry(serverInfo).State = EntityState.Modified;
@@ -79,7 +104,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ServerInfoExists(endPoint))
+                if (!ServerInfoExists(endpoint))
                 {
                     return NotFound();
                 }

@@ -19,11 +19,11 @@ namespace Kontur.GameStats.Server
             config.MapHttpAttributeRoutes();
             config.Formatters.JsonFormatter.SupportedMediaTypes
                     .Add(new MediaTypeHeaderValue("text/html"));
-
+            config.EnsureInitialized();
             StandardKernel kernel = new StandardKernel();
             kernel.Load(Assembly.GetExecutingAssembly());
 
-            config.DependencyResolver = new NinjectDependencyResolver(kernel);
+            //config.DependencyResolver = new NinjectDependencyResolver(kernel);
 
             appBuilder.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
             appBuilder.UseWebApi(config);
