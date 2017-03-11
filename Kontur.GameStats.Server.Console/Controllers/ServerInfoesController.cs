@@ -30,13 +30,14 @@ namespace Kontur.GameStats.Server.Controllers
 
         [HttpGet]     
         [Route("servers/info")]
-        [ResponseType(typeof(IEnumerable<GeneralServerInformation>))]
+        [ResponseType(typeof(ICollection<GeneralServerInformation>))]
         public IHttpActionResult GetServerInfos()
         {
             logger.Info("GET запрос servers/info принят");
-            var response = new List<GeneralServerInformation>();
+            ICollection<GeneralServerInformation> response = new LinkedList<GeneralServerInformation>();
 
-            foreach(var serverInfo in db.Servers)
+            var temp = db.Servers.Include("GameModes").ToList();
+            foreach (var serverInfo in temp)
             {
                 var generalInformation = new GeneralServerInformation();
                 generalInformation.Endpoint = serverInfo.Endpoint;
