@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
-using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Net;
 using System.Web.Http;
 using System.Web.Http.Description;
 using Kontur.GameStats.Server.Models;
 using Ninject.Extensions.Logging;
 using System.Text.RegularExpressions;
 using System;
+using Kontur.GameStats.Server.Requests;
+using Kontur.GameStats.Server.Responces;
 
 namespace Kontur.GameStats.Server.Controllers
 {
@@ -28,26 +28,35 @@ namespace Kontur.GameStats.Server.Controllers
             this.logger = logger;
         }
 
-        [ResponseType(typeof(IEnumerable<ServerInfo>))]
+        [HttpGet]     
         [Route("servers/info")]
-        [HttpGet]
+        [ResponseType(typeof(IEnumerable<GeneralServerInformation>))]
         public IHttpActionResult GetServerInfos()
         {
             logger.Info("GET запрос servers/info принят");
-            return Ok(db.ServerInfos);
+            var response = new List<GeneralServerInformation>();
+
+            foreach(var serverInfo in db.Servers)
+            {
+                var generalInformation = new GeneralServerInformation();
+                generalInformation.Endpoint = serverInfo.Endpoint;
+                generalInformation.Info = ExtractServerInfo(serverInfo);
+                response.Add(generalInformation);
+            }
+
+            return Ok(response);
         }
 
-        [ResponseType(typeof(ServerInfo))]
-        [Route("servers/{endpoint}/info")]
         [HttpGet]
+        [Route("servers/{endpoint}/info")]
+        [ResponseType(typeof(AdvertiseRequest))]
         public IHttpActionResult GetServerInfo(string endpoint)
         {
-            
             try
             {
                 if (!validIpAddressRegex.IsMatch(endpoint) && !validHostnameRegex.IsMatch(endpoint))
                 {
-                    logger.Info("GET запрос servers/{0}/info не корректен",endpoint);
+                    logger.Info("GET запрос servers/{0}/info не корректен", endpoint);
                     return BadRequest();
                 }
             }
@@ -57,52 +66,67 @@ namespace Kontur.GameStats.Server.Controllers
                 return BadRequest();
             }
 
-            ServerInfo serverInfo = db.ServerInfos.Find(endpoint);
+            ServerInfo serverInfo = db.Servers.Find(endpoint);
             if (serverInfo == null)
             {
                 return NotFound();
             }
 
-            return Ok(serverInfo);
+            AdvertiseRequest response = ExtractServerInfo(serverInfo);
+            return Ok(response);
         }
 
-        [ResponseType(typeof(void))]
-        [Route("servers/{endpoint}/info")]
+        private static AdvertiseRequest ExtractServerInfo(ServerInfo serverInfo)
+        {
+            AdvertiseRequest response = new AdvertiseRequest();
+            response.Name = serverInfo.Name;
+            foreach (var gameMode in serverInfo.GameModes)
+                response.GameModes.Add(gameMode.Name);
+            return response;
+        }
+
         [HttpPut]
-        public IHttpActionResult SaveServerInfo(string endpoint, ServerInfo advertiseRequest)
+        [Route("servers/{endpoint}/info")]
+        [ResponseType(typeof(void))]
+        public IHttpActionResult SaveServerInfo(string endpoint, AdvertiseRequest advertiseRequest)
         {
             if (!ModelState.IsValid)
             {
+                logger.Info("Put запрос servers/{0}/info не корректен", endpoint);
                 return BadRequest(ModelState);
             }
 
             if (!validHostnameRegex.IsMatch(endpoint) && !validHostnameRegex.IsMatch(endpoint))
             {
+                logger.Info("Put запрос servers/{0}/info не корректен", endpoint);
                 return BadRequest();
             }
 
             if (!ServerInfoExists(endpoint))
             {
-                ServerInfo serverInfo = new ServerInfo() { Id = endpoint, Name = advertiseRequest.Name };
-                /* foreach (string value in advertiseRequest.GameModes)
-                 {
-                     var findedValue = db.GameModes.Find();
-                 }*/
-                db.ServerInfos.Add(serverInfo);
+                logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
+
+                ServerInfo serverInfo = new ServerInfo();
+                serverInfo.Endpoint = endpoint;
+                serverInfo.Name = advertiseRequest.Name;
+                AddOrChangeGameModes(advertiseRequest, serverInfo);
+
+                db.Servers.Add(serverInfo);
             }
             else
             {
-                var serverInfo = db.ServerInfos.Single(row => row.Id == endpoint);
+                logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
+
+                var serverInfo = db.Servers.Single(row => row.Endpoint == endpoint);
                 serverInfo.Name = advertiseRequest.Name;
-                serverInfo.GameModes = advertiseRequest.GameModes;
-                db.Entry(serverInfo).State = EntityState.Modified;
+                AddOrChangeGameModes(advertiseRequest, serverInfo);
             }
 
             try
             {
                 db.SaveChanges();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException exception)
             {
                 if (!ServerInfoExists(endpoint))
                 {
@@ -110,11 +134,30 @@ namespace Kontur.GameStats.Server.Controllers
                 }
                 else
                 {
-                    throw;
+                    logger.ErrorException("Put запрос servers/{0}/info", exception);
+                    return InternalServerError();
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            return Ok();
+        }
+
+        private void AddOrChangeGameModes(AdvertiseRequest advertiseRequest, ServerInfo serverInfo)
+        {
+            serverInfo.GameModes.Clear();
+            foreach (var gameModeName in advertiseRequest.GameModes)
+            {
+                GameMode mode;
+                try { mode = db.GameModes.First(gmode => gmode.Name == gameModeName.ToUpper()); }
+                catch (InvalidOperationException)
+                {
+                    mode = new GameMode();
+                    mode.Name = gameModeName.ToUpper();
+                    db.GameModes.Add(mode);
+                    db.SaveChanges();
+                }
+                serverInfo.GameModes.Add(mode);
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -128,7 +171,7 @@ namespace Kontur.GameStats.Server.Controllers
 
         private bool ServerInfoExists(string id)
         {
-            return db.ServerInfos.Count(e => e.Id == id) > 0;
+            return db.Servers.Any(e => e.Endpoint == id);
         }
     }
 }

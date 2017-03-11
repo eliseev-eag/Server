@@ -1,19 +1,19 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Kontur.GameStats.Server.Models
 {
     public class ServerInfo
     {
-        [JsonIgnore]
-        public string Id { get; set; }
-        [JsonProperty(PropertyName = "name")]
+        [Key]
+        public string Endpoint { get; set; }
         public string Name { get; set; }
-        [JsonProperty(PropertyName = "gameModes")]
-        [NotMapped]
-        public List<string> GameModes { get; set; }
-        [JsonIgnore]
-        public ICollection<GameMode> GameModeCollection { get; set; }
+        
+        public virtual ICollection<GameMode> GameModes { get; set; }
+
+        public ServerInfo()
+        {
+            GameModes = new HashSet<GameMode>();
+        }
     }
 }
