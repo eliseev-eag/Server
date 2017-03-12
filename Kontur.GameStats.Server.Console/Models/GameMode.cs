@@ -7,6 +7,7 @@ namespace Kontur.GameStats.Server.Models
     {
         [Key]
         public string Name { get; set; }
+
         public virtual ICollection<ServerInfo> Servers { get; set; }
 
         public GameMode()

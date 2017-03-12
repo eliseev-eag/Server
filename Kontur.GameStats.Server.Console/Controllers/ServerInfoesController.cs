@@ -28,7 +28,7 @@ namespace Kontur.GameStats.Server.Controllers
             this.logger = logger;
         }
 
-        [HttpGet]     
+        [HttpGet]
         [Route("servers/info")]
         [ResponseType(typeof(ICollection<GeneralServerInformation>))]
         public IHttpActionResult GetServerInfos()
@@ -81,6 +81,7 @@ namespace Kontur.GameStats.Server.Controllers
         {
             AdvertiseRequest response = new AdvertiseRequest();
             response.Name = serverInfo.Name;
+            response.GameModes = new List<string>();
             foreach (var gameMode in serverInfo.GameModes)
                 response.GameModes.Add(gameMode.Name);
             return response;
@@ -89,7 +90,7 @@ namespace Kontur.GameStats.Server.Controllers
         [HttpPut]
         [Route("servers/{endpoint}/info")]
         [ResponseType(typeof(void))]
-        public IHttpActionResult SaveServerInfo(string endpoint, AdvertiseRequest advertiseRequest)
+        public IHttpActionResult SaveServerInfo(string endpoint, [FromBody]AdvertiseRequest advertiseRequest)
         {
             if (!ModelState.IsValid)
             {
@@ -106,28 +107,19 @@ namespace Kontur.GameStats.Server.Controllers
             if (!ServerInfoExists(endpoint))
             {
                 logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
-
-                ServerInfo serverInfo = new ServerInfo();
-                serverInfo.Endpoint = endpoint;
-                serverInfo.Name = advertiseRequest.Name;
-                AddOrChangeGameModes(advertiseRequest, serverInfo);
-
-                db.Servers.Add(serverInfo);
+                AddServerInfo(endpoint, advertiseRequest);
             }
             else
             {
                 logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
-
-                var serverInfo = db.Servers.Single(row => row.Endpoint == endpoint);
-                serverInfo.Name = advertiseRequest.Name;
-                AddOrChangeGameModes(advertiseRequest, serverInfo);
+                UpdateServerInfo(endpoint, advertiseRequest);
             }
 
             try
             {
                 db.SaveChanges();
             }
-            catch (DbUpdateConcurrencyException exception)
+            catch (DbUpdateException)
             {
                 if (!ServerInfoExists(endpoint))
                 {
@@ -135,15 +127,36 @@ namespace Kontur.GameStats.Server.Controllers
                 }
                 else
                 {
-                    logger.ErrorException("Put запрос servers/{0}/info", exception);
-                    return InternalServerError();
+                    UpdateServerInfo(endpoint, advertiseRequest);                    
                 }
+            }
+            catch(Exception exception)
+            {
+                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                return InternalServerError();
             }
 
             return Ok();
         }
 
-        private void AddOrChangeGameModes(AdvertiseRequest advertiseRequest, ServerInfo serverInfo)
+        private void UpdateServerInfo(string endpoint, AdvertiseRequest advertiseRequest)
+        {
+            var serverInfo = db.Servers.Single(row => row.Endpoint == endpoint);
+            serverInfo.Name = advertiseRequest.Name;
+            UpdateServerGameModes(advertiseRequest, serverInfo);
+        }
+
+        private void AddServerInfo(string endpoint, AdvertiseRequest advertiseRequest)
+        {
+            ServerInfo serverInfo = new ServerInfo();
+            serverInfo.Endpoint = endpoint;
+            serverInfo.Name = advertiseRequest.Name;
+            UpdateServerGameModes(advertiseRequest, serverInfo);
+
+            db.Servers.Add(serverInfo);
+        }
+
+        private void UpdateServerGameModes(AdvertiseRequest advertiseRequest, ServerInfo serverInfo)
         {
             serverInfo.GameModes.Clear();
             foreach (var gameModeName in advertiseRequest.GameModes)
@@ -155,7 +168,11 @@ namespace Kontur.GameStats.Server.Controllers
                     mode = new GameMode();
                     mode.Name = gameModeName.ToUpper();
                     db.GameModes.Add(mode);
-                    db.SaveChanges();
+                    try { db.SaveChanges(); }
+                    catch (DbUpdateException)
+                    {
+                        mode = db.GameModes.First(gmode => gmode.Name == gameModeName.ToUpper());
+                    }
                 }
                 serverInfo.GameModes.Add(mode);
             }
