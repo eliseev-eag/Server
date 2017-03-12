@@ -36,16 +36,24 @@ namespace Kontur.GameStats.Server.Controllers
             logger.Info("GET запрос servers/info принят");
             ICollection<GeneralServerInformation> response = new LinkedList<GeneralServerInformation>();
 
-            var temp = db.Servers.Include("GameModes").ToList();
-            foreach (var serverInfo in temp)
+            try
             {
-                var generalInformation = new GeneralServerInformation();
-                generalInformation.Endpoint = serverInfo.Endpoint;
-                generalInformation.Info = ExtractServerInfo(serverInfo);
-                response.Add(generalInformation);
-            }
+                var serverInfoesCollection = db.Servers.Include("GameModes").ToList();
+                foreach (var serverInfo in serverInfoesCollection)
+                {
+                    var generalInformation = new GeneralServerInformation();
+                    generalInformation.Endpoint = serverInfo.Endpoint;
+                    generalInformation.Info = ExtractServerInfo(serverInfo);
+                    response.Add(generalInformation);
+                }
 
-            return Ok(response);
+                return Ok(response);
+            }
+            catch (Exception exception)
+            {
+                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                return InternalServerError();
+            }
         }
 
         [HttpGet]
@@ -66,18 +74,25 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("GET запрос servers/{0}/info не корректен", endpoint);
                 return BadRequest();
             }
-
-            ServerInfo serverInfo = db.Servers.Find(endpoint);
-            if (serverInfo == null)
+            try
             {
-                return NotFound();
-            }
+                ServerInfo serverInfo = db.Servers.Find(endpoint);
+                if (serverInfo == null)
+                {
+                    return NotFound();
+                }
 
-            AdvertiseRequest response = ExtractServerInfo(serverInfo);
-            return Ok(response);
+                AdvertiseRequest response = ExtractServerInfo(serverInfo);
+                return Ok(response);
+            }
+            catch (Exception exception)
+            {
+                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                return InternalServerError();
+            }
         }
 
-        private static AdvertiseRequest ExtractServerInfo(ServerInfo serverInfo)
+        private AdvertiseRequest ExtractServerInfo(ServerInfo serverInfo)
         {
             AdvertiseRequest response = new AdvertiseRequest();
             response.Name = serverInfo.Name;
@@ -104,21 +119,22 @@ namespace Kontur.GameStats.Server.Controllers
                 return BadRequest();
             }
 
-            if (!ServerInfoExists(endpoint))
-            {
-                logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
-                AddServerInfo(endpoint, advertiseRequest);
-            }
-            else
-            {
-                logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
-                UpdateServerInfo(endpoint, advertiseRequest);
-            }
-
             try
             {
+                if (!ServerInfoExists(endpoint))
+                {
+                    logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
+                    AddServerInfo(endpoint, advertiseRequest);
+                }
+                else
+                {
+                    logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
+                    UpdateServerInfo(endpoint, advertiseRequest);
+                }
+
                 db.SaveChanges();
             }
+
             catch (DbUpdateException)
             {
                 if (!ServerInfoExists(endpoint))
@@ -127,10 +143,11 @@ namespace Kontur.GameStats.Server.Controllers
                 }
                 else
                 {
-                    UpdateServerInfo(endpoint, advertiseRequest);                    
+                    UpdateServerInfo(endpoint, advertiseRequest);
                 }
             }
-            catch(Exception exception)
+
+            catch (Exception exception)
             {
                 logger.ErrorException("Put запрос servers/{0}/info", exception);
                 return InternalServerError();
