@@ -9,13 +9,14 @@ using System.Text.RegularExpressions;
 using System;
 using Kontur.GameStats.Server.Requests;
 using Kontur.GameStats.Server.Responces;
+using LiteDB;
 
 namespace Kontur.GameStats.Server.Controllers
 {
     public class ServerInfoesController : ApiController
     {
         private readonly ILogger logger;
-        private DatabaseContext db = new DatabaseContext();
+        private LiteDatabase db = new LiteDatabase("Database.db");
 
         private const string validIpAddress = @"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])";
         private const string validPortNumber = @"-([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$";
@@ -38,16 +39,17 @@ namespace Kontur.GameStats.Server.Controllers
 
             try
             {
-                var serverInfoesCollection = db.Servers.Include("GameModes").ToList();
-                foreach (var serverInfo in serverInfoesCollection)
-                {
-                    var generalInformation = new GeneralServerInformation();
-                    generalInformation.Endpoint = serverInfo.Endpoint;
-                    generalInformation.Info = ExtractServerInfo(serverInfo);
-                    response.Add(generalInformation);
-                }
+                var col = db.GetCollection<ServerInfo>("serverinfoes");
+                var serverInfoesCollection = col.FindAll().Select(x => new { endpoint = x.Endpoint, info = new { name = x.Name, gameModes = x.GameModes } });
+                //foreach (var serverInfo in serverInfoesCollection)
+                //{
+                //    var generalInformation = new GeneralServerInformation();
+                //    generalInformation.Endpoint = serverInfo.Endpoint;
+                //    generalInformation.Info = ExtractServerInfo(serverInfo);
+                //    response.Add(generalInformation);
+                //}
 
-                return Ok(response);
+                return Ok(serverInfoesCollection);
             }
             catch (Exception exception)
             {
@@ -76,7 +78,8 @@ namespace Kontur.GameStats.Server.Controllers
             }
             try
             {
-                ServerInfo serverInfo = db.Servers.Find(endpoint);
+                var col = db.GetCollection<ServerInfo>("serverinfoes");
+                ServerInfo serverInfo = col.FindOne(element => element.Endpoint == endpoint);
                 if (serverInfo == null)
                 {
                     return NotFound();
@@ -94,11 +97,12 @@ namespace Kontur.GameStats.Server.Controllers
 
         private AdvertiseRequest ExtractServerInfo(ServerInfo serverInfo)
         {
+
             AdvertiseRequest response = new AdvertiseRequest();
             response.Name = serverInfo.Name;
             response.GameModes = new List<string>();
             foreach (var gameMode in serverInfo.GameModes)
-                response.GameModes.Add(gameMode.Name);
+                response.GameModes.Add(gameMode);
             return response;
         }
 
@@ -119,22 +123,36 @@ namespace Kontur.GameStats.Server.Controllers
                 return BadRequest();
             }
 
-            try
+            // try
+            //{
+            var col = db.GetCollection<ServerInfo>("serverinfoes");
+            var doc = col.FindOne(document => document.Endpoint == endpoint);
+            if (doc == null)
             {
-                if (!ServerInfoExists(endpoint))
-                {
-                    logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
-                    AddServerInfo(endpoint, advertiseRequest);
-                }
-                else
-                {
-                    logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
-                    UpdateServerInfo(endpoint, advertiseRequest);
-                }
-
-                db.SaveChanges();
+                doc = new ServerInfo();
             }
+            doc.GameModes = advertiseRequest.GameModes;
+            doc.Name = advertiseRequest.Name;
+            doc.Endpoint = endpoint;
+            col.EnsureIndex(e => e.Endpoint);
+            col.EnsureIndex(e => e.GameModes);
+            col.Upsert(doc);
 
+
+            /*if (!ServerInfoExists(endpoint))
+            {
+                logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
+                AddServerInfo(endpoint, advertiseRequest);
+            }
+            else
+            {
+                logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
+                UpdateServerInfo(endpoint, advertiseRequest);
+            }
+            col.c
+            db.SaveChanges();*/
+            //}
+            /*
             catch (DbUpdateException)
             {
                 if (!ServerInfoExists(endpoint))
@@ -145,17 +163,17 @@ namespace Kontur.GameStats.Server.Controllers
                 {
                     UpdateServerInfo(endpoint, advertiseRequest);
                 }
-            }
-
-            catch (Exception exception)
-            {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
-                return InternalServerError();
-            }
+            }*/
+            /*
+                        catch (Exception exception)
+                        {
+                            logger.ErrorException("Put запрос servers/{0}/info", exception);
+                            return InternalServerError();
+                        }*/
 
             return Ok();
         }
-
+        /*
         private void UpdateServerInfo(string endpoint, AdvertiseRequest advertiseRequest)
         {
             var serverInfo = db.Servers.Single(row => row.Endpoint == endpoint);
@@ -193,7 +211,7 @@ namespace Kontur.GameStats.Server.Controllers
                 }
                 serverInfo.GameModes.Add(mode);
             }
-        }
+        }*/
 
         protected override void Dispose(bool disposing)
         {
@@ -203,10 +221,10 @@ namespace Kontur.GameStats.Server.Controllers
             }
             base.Dispose(disposing);
         }
-
+        /*
         private bool ServerInfoExists(string id)
         {
             return db.Servers.Any(e => e.Endpoint == id);
-        }
+        }*/
     }
 }
