@@ -21,13 +21,14 @@ namespace Kontur.GameStats.Server.Controllers
 
 
         [HttpPut]
-        [Route("servers/{endpoint}/matches/{timestamp}")]
+        [Route("servers/{endpoint}/matches/{time}")]
         [ResponseType(typeof(void))]
-        public IHttpActionResult SaveServerInfo(string endpoint, DateTime timestamp, [FromBody]MatchResultRequest matchResultRequest)
+        public IHttpActionResult SaveServerInfo([FromUri]string endpoint, [FromUri]DateTime time, [FromBody]MatchResultRequest matchResultRequest)
         {
+            time = time.ToUniversalTime();
             if (!ModelState.IsValid)
             {
-                logger.Info("Put запрос servers/{0}/matches/{1} не корректен", endpoint, timestamp);
+                logger.Info("Put запрос servers/{0}/matches/{1} не корректен", endpoint, time);
                 return BadRequest(ModelState);
             }
 
@@ -38,7 +39,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (InvalidOperationException)
             {
-                logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, timestamp);
+                logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, time);
                 return BadRequest();
             }
             GameMode gameMode;
@@ -48,23 +49,23 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (InvalidOperationException)
             {
-                logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, timestamp);
+                logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, time);
                 return BadRequest();
             }
 
             // try
             {
-                logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, timestamp);
+                logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, time);
                 MatchResult matchResult = new MatchResult();
                 matchResult.Server = server;
-                matchResult.Timestamp = timestamp;
+                matchResult.Timestamp = time;
                 matchResult.Map = matchResultRequest.Map;
                 matchResult.GameMode = gameMode;
                 matchResult.FragLimit = matchResultRequest.FragLimit;
                 matchResult.TimeLimit = matchResultRequest.TimeLimit;
-                matchResult.TimeEllapsed = matchResultRequest.TimeEllapsed;
+                matchResult.TimeElapsed = matchResultRequest.TimeElapsed;
                 SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
-
+                db.MathesResults.Add(matchResult);
                 db.SaveChanges();
             }
             /*          catch (Exception exception)
@@ -93,47 +94,58 @@ namespace Kontur.GameStats.Server.Controllers
                 record.Frags = scoreboardRow.Frags;
                 record.Deaths = scoreboardRow.Deaths;
                 record.Player = player;
-                record.ScoreboardPosition = i+1;
+                record.ScoreboardPosition = i + 1;
                 record.Match = match;
-
+                match.ScoreBoard.Add(record);
             }
         }
-        /*
+
         [HttpGet]
-        [Route("servers/{endpoint}/info")]
-        [ResponseType(typeof(AdvertiseRequest))]
-        public IHttpActionResult GetServerInfo(string endpoint)
+        [Route("servers/{endpoint}/matches/{time}")]
+        [ResponseType(typeof(MatchResultRequest))]
+        public IHttpActionResult GetServerInfo([FromUri]string endpoint, [FromUri]DateTime time)
         {
+            time = time.ToUniversalTime();
+            if (!ModelState.IsValid)
+            {
+                logger.Info("Get запрос servers/{0}/matches/{1} не корректен", endpoint, time);
+                return BadRequest(ModelState);
+            }
+
+            MatchResult match;
             try
             {
-                if (!validIpAddressRegex.IsMatch(endpoint) && !validHostnameRegex.IsMatch(endpoint))
-                {
-                    logger.Info("GET запрос servers/{0}/info не корректен", endpoint);
-                    return BadRequest();
-                }
+                match = db.MathesResults.Single(rec => rec.Server.Endpoint == endpoint && rec.Timestamp == time);
             }
-            catch (ArgumentNullException)
+            catch (InvalidOperationException)
             {
-                logger.Info("GET запрос servers/{0}/info не корректен", endpoint);
+                logger.Info("Get запрос servers/{0}/matches/{1}. Match с заданным endpoint {0} и timestamp{1}не найден", endpoint, time);
                 return BadRequest();
             }
-            try
-            {
-                ServerInfo serverInfo = db.Servers.Find(endpoint);
-                if (serverInfo == null)
-                {
-                    return NotFound();
-                }
+            MatchResultRequest response = ExtractMatchResultsRequest(match);
+            return Ok(response);
+        }
 
-                AdvertiseRequest response = ExtractServerInfo(serverInfo);
-                return Ok(response);
-            }
-            catch (Exception exception)
+        private MatchResultRequest ExtractMatchResultsRequest(MatchResult match)
+        {
+            MatchResultRequest result = new MatchResultRequest();
+            result.FragLimit = match.FragLimit;
+            result.GameMode = match.GameMode.Name;
+            result.Map = match.Map;
+            result.TimeElapsed = match.TimeElapsed;
+            result.TimeLimit = match.TimeLimit;
+            result.Scoreboard = new List<ScoreboardElement>();
+            foreach (var scoreboardRecord in match.ScoreBoard)
             {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
-                return InternalServerError();
+                ScoreboardElement scoreElement = new ScoreboardElement();
+                scoreElement.Name = scoreboardRecord.Player.Name;
+                scoreElement.Deaths = scoreboardRecord.Deaths;
+                scoreElement.Frags = scoreboardRecord.Frags;
+                scoreElement.Kills = scoreboardRecord.Kills;
+                result.Scoreboard.Add(scoreElement);
             }
-        }*/
+            return result;
+        }
 
         protected override void Dispose(bool disposing)
         {

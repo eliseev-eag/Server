@@ -23,8 +23,8 @@ namespace Kontur.GameStats.Server.Requests
         public double TimeLimit { get; set; }
 
         [Required]
-        [JsonProperty(PropertyName = "timeEllapsed")]
-        public double TimeEllapsed { get; set; }
+        [JsonProperty(PropertyName = "timeElapsed")]
+        public double TimeElapsed { get; set; }
 
         [Required]
         [JsonProperty(PropertyName = "scoreboard")]

@@ -15,6 +15,7 @@ namespace Kontur.GameStats.Server
             HttpConfiguration config = new HttpConfiguration();
 
             config.MapHttpAttributeRoutes();
+
             config.Formatters.JsonFormatter.SupportedMediaTypes
                     .Add(new MediaTypeHeaderValue("text/html"));
 
