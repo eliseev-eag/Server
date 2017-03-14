@@ -3,15 +3,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Kontur.GameStats.Server.Models
 {
-    public class Player
+    public class Map
     {
         [Key]
         public string Name { get; set; }
-        public ICollection<ScoreboardRecord> Scores { get; set; }
-         
-        public Player()
+        public virtual ICollection<MatchResult> Matches { get; set; } 
+
+        public Map()
         {
-            Scores = new HashSet<ScoreboardRecord>();
+            Matches = new HashSet<MatchResult>();
         }
     }
 }

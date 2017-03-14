@@ -3,6 +3,7 @@ using Kontur.GameStats.Server.Requests;
 using Ninject.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Description;
@@ -42,6 +43,7 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, time);
                 return BadRequest();
             }
+
             GameMode gameMode;
             try
             {
@@ -52,14 +54,30 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, time);
                 return BadRequest();
             }
+            Map map;
+            try
+            {
+                map = db.Maps.Single(rec => rec.Name == matchResultRequest.Map);
+            }
+            catch (InvalidOperationException)
+            {
+                map = new Map();
+                map.Name = matchResultRequest.Map;
+                db.Maps.Add(map);
+                try { db.SaveChanges(); }
+                catch (DbUpdateException)
+                {
+                    map = db.Maps.First(m => m.Name == matchResultRequest.Map);
+                }
+            }
 
-            // try
+            try
             {
                 logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, time);
                 MatchResult matchResult = new MatchResult();
                 matchResult.Server = server;
                 matchResult.Timestamp = time;
-                matchResult.Map = matchResultRequest.Map;
+                matchResult.Map = map;
                 matchResult.GameMode = gameMode;
                 matchResult.FragLimit = matchResultRequest.FragLimit;
                 matchResult.TimeLimit = matchResultRequest.TimeLimit;
@@ -68,12 +86,11 @@ namespace Kontur.GameStats.Server.Controllers
                 db.MathesResults.Add(matchResult);
                 db.SaveChanges();
             }
-            /*          catch (Exception exception)
-                      {
-                          logger.ErrorException("Put запрос servers/{0}/info", exception);
-                          return InternalServerError();
-                      }
-                      */
+            catch (Exception exception)
+            {
+                logger.Error(exception," Exception в Put запросе servers/{0}/info", endpoint);
+                return InternalServerError();
+            }
             return Ok();
         }
 
@@ -119,7 +136,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (InvalidOperationException)
             {
-                logger.Info("Get запрос servers/{0}/matches/{1}. Match с заданным endpoint {0} и timestamp{1}не найден", endpoint, time);
+                logger.Info("Get запрос servers/{0}/matches/{1}. Match с заданным endpoint {0} и timestamp {1} не найден", endpoint, time);
                 return BadRequest();
             }
             MatchResultRequest response = ExtractMatchResultsRequest(match);
@@ -131,7 +148,7 @@ namespace Kontur.GameStats.Server.Controllers
             MatchResultRequest result = new MatchResultRequest();
             result.FragLimit = match.FragLimit;
             result.GameMode = match.GameMode.Name;
-            result.Map = match.Map;
+            result.Map = match.Map.Name;
             result.TimeElapsed = match.TimeElapsed;
             result.TimeLimit = match.TimeLimit;
             result.Scoreboard = new List<ScoreboardElement>();

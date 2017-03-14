@@ -51,7 +51,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.Error(exception,"Exception в Put запросе servers/info");
+                logger.Error(exception, "Exception в Put запросе servers/info");
                 return InternalServerError();
             }
         }
@@ -87,7 +87,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                logger.Error(exception, "Exception в Put запросе servers/{0}/info", endpoint);
                 return InternalServerError();
             }
         }
@@ -149,7 +149,7 @@ namespace Kontur.GameStats.Server.Controllers
 
             catch (Exception exception)
             {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                logger.Error(exception, "Excetion в Put запросе servers/{0}/info", endpoint);
                 return InternalServerError();
             }
 

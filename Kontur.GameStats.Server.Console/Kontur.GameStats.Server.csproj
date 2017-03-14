@@ -156,8 +156,10 @@
   <ItemGroup>
     <Compile Include="Controllers\MatchResultController.cs" />
     <Compile Include="Controllers\ServerInfoesController.cs" />
+    <Compile Include="Controllers\StatsController.cs" />
     <Compile Include="Models\DatabaseContext.cs" />
     <Compile Include="Models\GameMode.cs" />
+    <Compile Include="Models\Map.cs" />
     <Compile Include="Models\MatchResult.cs" />
     <Compile Include="Models\Player.cs" />
     <Compile Include="Models\ScoreboardRecord.cs" />
@@ -166,6 +168,7 @@
     <Compile Include="Requests\MatchResultRequest.cs" />
     <Compile Include="Requests\ScoreboardElement.cs" />
     <Compile Include="Responces\GeneralServerInformation.cs" />
+    <Compile Include="Responces\ServerStats.cs" />
     <Compile Include="Startup.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
