@@ -7,9 +7,13 @@ namespace Kontur.GameStats.Server.Models
         public DatabaseContext() : base("name = DatabaseContext") { }
         public virtual DbSet<ServerInfo> Servers { get; set; }
         public virtual DbSet<GameMode> GameModes { get; set; }
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        public virtual DbSet<MatchResult> MathesResults { get; set; }
+        public virtual DbSet<Player> Players { get; set; }
+        public virtual DbSet<ScoreboardRecord> ScoreboardRecords { get; set; }
+
+        /*protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
 
-        }
+        }*/
     }
 }

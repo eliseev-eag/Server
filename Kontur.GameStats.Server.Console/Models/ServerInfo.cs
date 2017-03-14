@@ -10,10 +10,11 @@ namespace Kontur.GameStats.Server.Models
         public string Name { get; set; }
         
         public virtual ICollection<GameMode> GameModes { get; set; }
-
+        public virtual ICollection<MatchResult> Mathes { get; set; }
         public ServerInfo()
         {
             GameModes = new HashSet<GameMode>();
+            Mathes = new HashSet<MatchResult>();
         }
     }
 }
