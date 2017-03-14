@@ -51,7 +51,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
+                logger.Error(exception,"Exception в Put запросе servers/info");
                 return InternalServerError();
             }
         }
@@ -207,6 +207,85 @@ namespace Kontur.GameStats.Server.Controllers
         private bool ServerInfoExists(string id)
         {
             return db.Servers.Any(e => e.Endpoint == id);
+        }
+
+        [HttpPut]
+        [Route("servers/{endpoint}/matches/{timestamp}")]
+        [ResponseType(typeof(void))]
+        public IHttpActionResult SaveServerInfo(string endpoint, DateTime timestamp, [FromBody]MatchResultRequest matchResultRequest)
+        {
+            if (!ModelState.IsValid)
+            {
+                logger.Info("Put запрос servers/{0}/matches/{1} не корректен", endpoint, timestamp);
+                return BadRequest(ModelState);
+            }
+
+            ServerInfo server;
+            try
+            {
+                server = db.Servers.Single(rec => rec.Endpoint == endpoint);
+            }
+            catch (InvalidOperationException)
+            {
+                logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, timestamp);
+                return BadRequest();
+            }
+            GameMode gameMode;
+            try
+            {
+                gameMode = db.GameModes.Single(rec => rec.Name == matchResultRequest.GameMode);
+            }
+            catch (InvalidOperationException)
+            {
+                logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, timestamp);
+                return BadRequest();
+            }
+
+            // try
+            {
+                logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, timestamp);
+                MatchResult matchResult = new MatchResult();
+                matchResult.Server = server;
+                matchResult.Timestamp = timestamp;
+                matchResult.Map = matchResultRequest.Map;
+                matchResult.GameMode = gameMode;
+                matchResult.FragLimit = matchResultRequest.FragLimit;
+                matchResult.TimeLimit = matchResultRequest.TimeLimit;
+                matchResult.TimeEllapsed = matchResultRequest.TimeEllapsed;
+                SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
+
+                db.SaveChanges();
+            }
+            /*          catch (Exception exception)
+                      {
+                          logger.ErrorException("Put запрос servers/{0}/info", exception);
+                          return InternalServerError();
+                      }
+                      */
+            return Ok();
+        }
+
+        private void SaveScoreboard(List<ScoreboardElement> scoreboard, MatchResult match)
+        {
+            for (int i = 0; i < scoreboard.Count; i++)
+            {
+                var scoreboardRow = scoreboard[i];
+                Player player;
+                try { player = db.Players.Single(p => p.Name == scoreboardRow.Name); }
+                catch (InvalidOperationException)
+                {
+                    player = new Player() { Name = scoreboardRow.Name };
+                    db.Players.Add(player);
+                }
+                ScoreboardRecord record = new ScoreboardRecord();
+                record.Kills = scoreboardRow.Kills;
+                record.Frags = scoreboardRow.Frags;
+                record.Deaths = scoreboardRow.Deaths;
+                record.Player = player;
+                record.ScoreboardPosition = i + 1;
+                record.Match = match;
+
+            }
         }
     }
 }

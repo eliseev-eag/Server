@@ -2,6 +2,7 @@
 using Kontur.GameStats.Server.Requests;
 using Ninject.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Description;
@@ -51,7 +52,7 @@ namespace Kontur.GameStats.Server.Controllers
                 return BadRequest();
             }
 
-            try
+            // try
             {
                 logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, timestamp);
                 MatchResult matchResult = new MatchResult();
@@ -62,47 +63,42 @@ namespace Kontur.GameStats.Server.Controllers
                 matchResult.FragLimit = matchResultRequest.FragLimit;
                 matchResult.TimeLimit = matchResultRequest.TimeLimit;
                 matchResult.TimeEllapsed = matchResultRequest.TimeEllapsed;
-
-                if (!ServerInfoExists(endpoint))
-                {
-                    logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint,timestamp);
-                    AddServerInfo(endpoint, advertiseRequest);
-                }
-                else
-                {
-                    logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
-                    UpdateServerInfo(endpoint, advertiseRequest);
-                }
+                SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
 
                 db.SaveChanges();
             }
-
-            catch (DbUpdateException)
-            {
-                if (!ServerInfoExists(endpoint))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    UpdateServerInfo(endpoint, advertiseRequest);
-                }
-            }
-
-            catch (Exception exception)
-            {
-                logger.ErrorException("Put запрос servers/{0}/info", exception);
-                return InternalServerError();
-            }
-
+            /*          catch (Exception exception)
+                      {
+                          logger.ErrorException("Put запрос servers/{0}/info", exception);
+                          return InternalServerError();
+                      }
+                      */
             return Ok();
         }
 
-        private void SaveScoreboard()
+        private void SaveScoreboard(List<ScoreboardElement> scoreboard, MatchResult match)
         {
+            for (int i = 0; i < scoreboard.Count; i++)
+            {
+                var scoreboardRow = scoreboard[i];
+                Player player;
+                try { player = db.Players.Single(p => p.Name == scoreboardRow.Name); }
+                catch (InvalidOperationException)
+                {
+                    player = new Player() { Name = scoreboardRow.Name };
+                    db.Players.Add(player);
+                }
+                ScoreboardRecord record = new ScoreboardRecord();
+                record.Kills = scoreboardRow.Kills;
+                record.Frags = scoreboardRow.Frags;
+                record.Deaths = scoreboardRow.Deaths;
+                record.Player = player;
+                record.ScoreboardPosition = i+1;
+                record.Match = match;
 
+            }
         }
-
+        /*
         [HttpGet]
         [Route("servers/{endpoint}/info")]
         [ResponseType(typeof(AdvertiseRequest))]
@@ -137,7 +133,7 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.ErrorException("Put запрос servers/{0}/info", exception);
                 return InternalServerError();
             }
-        }
+        }*/
 
         protected override void Dispose(bool disposing)
         {
