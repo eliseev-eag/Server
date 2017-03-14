@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Kontur.GameStats.Server.Models
 {
     public class MatchResult
     {
         public long Id { get; set; }
+        public DateTime Timestamp { get; set; }
         public string Map { get; set; }
         public int FragLimit { get; set; }
         public double TimeLimit { get; set; }

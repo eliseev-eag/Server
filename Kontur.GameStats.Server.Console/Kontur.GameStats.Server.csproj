@@ -154,6 +154,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\MatchResultController.cs" />
     <Compile Include="Controllers\ServerInfoesController.cs" />
     <Compile Include="Models\DatabaseContext.cs" />
     <Compile Include="Models\GameMode.cs" />
