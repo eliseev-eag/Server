@@ -162,6 +162,8 @@
     <Compile Include="Models\ScoreboardRecord.cs" />
     <Compile Include="Models\ServerInfo.cs" />
     <Compile Include="Requests\AdvertiseRequest.cs" />
+    <Compile Include="Requests\MatchResultRequest.cs" />
+    <Compile Include="Requests\ScoreboardElement.cs" />
     <Compile Include="Responces\GeneralServerInformation.cs" />
     <Compile Include="Startup.cs" />
     <Compile Include="Program.cs" />
