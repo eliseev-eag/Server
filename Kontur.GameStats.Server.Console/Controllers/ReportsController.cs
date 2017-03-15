@@ -86,5 +86,21 @@ namespace Kontur.GameStats.Server.Controllers
             return Ok(response);
         }
 
+        [HttpGet]
+        [Route("reports/best-players/{count?}")]
+        [ResponseType(typeof(IEnumerable<PopularServers>))]
+        public IHttpActionResult GetBestPlayers([FromUri]int count = 5)
+        {
+            const int minMathesCount = 10;
+            if (count <= 0) return Ok(Enumerable.Empty<PopularServers>());
+
+            if (count > 50) count = 50;
+            var players = db.Players.Include("Scores")
+                .Where(p => p.Scores.Count() >= minMathesCount && p.Scores.Sum(d => d.Deaths) == 0)
+                .Select(e => new { name = e.Name, killToDeathRatio = e.Scores.Sum(k => k.Kills) / e.Scores.Sum(d => d.Deaths) });
+            var response = players.OrderByDescending(t => t.killToDeathRatio);
+            return Ok(response);
+        }
+
     }
 }

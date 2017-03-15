@@ -41,7 +41,7 @@ namespace Kontur.GameStats.Server.Controllers
             catch (InvalidOperationException)
             {
                 logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, time);
-                return BadRequest();
+                return NotFound();
             }
 
             GameMode gameMode;
@@ -88,7 +88,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.Error(exception," Exception в Put запросе servers/{0}/info", endpoint);
+                logger.Error(exception, " Exception в Put запросе servers/{0}/info", endpoint);
                 return InternalServerError();
             }
             return Ok();
@@ -98,20 +98,29 @@ namespace Kontur.GameStats.Server.Controllers
         {
             for (int i = 0; i < scoreboard.Count; i++)
             {
+
                 var scoreboardRow = scoreboard[i];
+                ScoreboardRecord record = new ScoreboardRecord();
                 Player player;
                 try { player = db.Players.Single(p => p.Name == scoreboardRow.Name); }
                 catch (InvalidOperationException)
                 {
                     player = new Player() { Name = scoreboardRow.Name };
+                    player.Scores.Add(record);
                     db.Players.Add(player);
                 }
-                ScoreboardRecord record = new ScoreboardRecord();
+
                 record.Kills = scoreboardRow.Kills;
                 record.Frags = scoreboardRow.Frags;
                 record.Deaths = scoreboardRow.Deaths;
                 record.Player = player;
-                record.ScoreboardPosition = i + 1;
+                player.Scores.Add(record);
+                if (i == 0)
+                    record.ScoreboardPercent = 100;
+                else if (i == scoreboard.Count - 1)
+                        record.ScoreboardPercent = 0;
+                    else
+                        record.ScoreboardPercent = i / (scoreboard.Count - 1);
                 record.Match = match;
                 match.ScoreBoard.Add(record);
             }
