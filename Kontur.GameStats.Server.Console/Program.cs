@@ -1,7 +1,9 @@
 ﻿using Fclp;
+using Kontur.GameStats.Server.Models;
 using Microsoft.Owin.Hosting;
 using NLog;
 using System;
+using System.Linq;
 
 namespace Kontur.GameStats.Server
 {
@@ -34,10 +36,11 @@ namespace Kontur.GameStats.Server
         private static void RunServer(Options options)
         {
             //using (WebApp.Start<Startup>(options.Prefix))
+            using (DatabaseContext context = new DatabaseContext())
             using (WebApp.Start<Startup>("http://localhost:12345/"))
             {
+                context.MathesResults.First();
 
-                // Keep the server going until we're done
                 logger.Info("Сервер запустился с префиксом {0}", options.Prefix);
                 Console.ReadKey();
             }

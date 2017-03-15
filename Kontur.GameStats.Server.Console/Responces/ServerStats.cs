@@ -18,6 +18,6 @@ namespace Kontur.GameStats.Server.Responces
         [JsonProperty(PropertyName = "top5GameModes")]
         public IEnumerable<string> Top5GameModes { get; set; }
         [JsonProperty(PropertyName = "top5Maps")]
-        public List<string> Top5Maps { get; set; }
+        public IEnumerable<string> Top5Maps { get; set; }
     }
 }

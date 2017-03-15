@@ -43,7 +43,7 @@ namespace Kontur.GameStats.Server.Controllers
             response.MaximumPopulation = matches.Max(m => m.ScoreBoard.Count());
             response.AveragePopulation = matches.Average(m => m.ScoreBoard.Count());
             response.Top5GameModes = server.GameModes.OrderByDescending(p => p.Matches.Count()).Select(m => m.Name).Take(5);
-            response.Top5Maps = server
+            response.Top5Maps = matches.GroupBy(p => p.Map).OrderByDescending(m => m.Count()).Select(n => n.Key.Name).Take(5);
             return Ok(response);
         }
     }
