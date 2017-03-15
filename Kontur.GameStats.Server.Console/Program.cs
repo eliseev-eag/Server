@@ -39,7 +39,7 @@ namespace Kontur.GameStats.Server
             using (DatabaseContext context = new DatabaseContext())
             using (WebApp.Start<Startup>("http://localhost:12345/"))
             {
-                context.MathesResults.First();
+                context.MathesResults.FirstOrDefault();
 
                 logger.Info("Сервер запустился с префиксом {0}", options.Prefix);
                 Console.ReadKey();
