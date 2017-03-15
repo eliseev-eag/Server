@@ -155,6 +155,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controllers\MatchResultController.cs" />
+    <Compile Include="Controllers\ReportsController.cs" />
     <Compile Include="Controllers\ServerInfoesController.cs" />
     <Compile Include="Controllers\StatsController.cs" />
     <Compile Include="Models\DatabaseContext.cs" />
@@ -168,6 +169,9 @@
     <Compile Include="Requests\MatchResultRequest.cs" />
     <Compile Include="Requests\ScoreboardElement.cs" />
     <Compile Include="Responces\GeneralServerInformation.cs" />
+    <Compile Include="Responces\PlayerStats.cs" />
+    <Compile Include="Responces\PopularServers.cs" />
+    <Compile Include="Responces\RecentMathes.cs" />
     <Compile Include="Responces\ServerStats.cs" />
     <Compile Include="Startup.cs" />
     <Compile Include="Program.cs" />
