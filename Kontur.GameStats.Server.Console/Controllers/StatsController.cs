@@ -54,5 +54,35 @@ namespace Kontur.GameStats.Server.Controllers
             }
             return Ok(response);
         }
+
+        [HttpGet]
+        [Route("players/{playerName}/stats")]
+        [ResponseType(typeof(PlayerStats))]
+        public IHttpActionResult GetPlayersStats([FromUri]string playerName)
+        {
+            Player player;
+            try
+            {
+                player = db.Players.Include("Scores").Single(rec => string.Compare(rec.Name, playerName, true) == 0);
+            }
+            catch (InvalidOperationException)
+            {
+                logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
+                return BadRequest();
+            }
+            PlayerStats response = new PlayerStats();
+            response.TotalMatchesPlayed = player.Scores.Count();
+            response.TotalMatchesWon = player.Scores.Count(p => p.ScoreboardPercent == 100);
+
+            response.FavoriteGameMode = player.Scores.GroupBy(p => p.Match.GameMode.Name).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
+            response.FavoriteServer = player.Scores.GroupBy(p => p.Match.Server.Endpoint).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
+            response.MaximumMatchesPerDay = player.Scores.GroupBy(p => p.Match.Timestamp.Date).Max(p => p.Count());
+            response.UniqueServers = player.Scores.GroupBy(p => p.Match.Server.Endpoint).Count();
+            response.AverageScoreboardPercent = player.Scores.Average(p => p.ScoreboardPercent);
+            response.LastMatchPlayed = player.Scores.Max(p => p.Match.Timestamp);
+            response.KillToDeathRatio = (double)player.Scores.Sum(k => k.Kills) / player.Scores.Sum(d => d.Deaths);
+            if (double.IsInfinity(response.KillToDeathRatio)) response.KillToDeathRatio = 0;
+            return Ok(response);
+        }
     }
 }

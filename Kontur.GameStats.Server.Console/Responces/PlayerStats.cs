@@ -24,7 +24,7 @@ namespace Kontur.GameStats.Server.Responces
         public double AverageScoreboardPercent { get; set; }
 
         [JsonProperty(PropertyName = "maximumMatchesPerDay")]
-        public int maximumMatchesPerDay { get; set; }
+        public int MaximumMatchesPerDay { get; set; }
 
         [JsonProperty(PropertyName = "averageMatchesPerDay")]
         public double AverageMatchesPerDay { get; set; }
