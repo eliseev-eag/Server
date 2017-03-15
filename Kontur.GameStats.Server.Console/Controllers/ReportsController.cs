@@ -75,25 +75,10 @@ namespace Kontur.GameStats.Server.Controllers
 
             if (count > 50) count = 50;
 
-            //var response = db.Servers.
-            //   Select(p => new { p.Mathes, p.Name, p.Endpoint });
-
-            //var response = db.Servers.
-            //   Select(p => new { p.Mathes, p.Name, p.Endpoint });
-
-            //var temp = response.Select(p => new PopularServers { AverageMatchesPerDay = p.Mathes.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp)).Average(s => s.Count()), Endpoint = p.Endpoint, Name = p.Name }).OrderByDescending(x => x.AverageMatchesPerDay);
-
-
-
-            //var temp = response.OrderByDescending(p => p.Mathes.GroupBy(m => m.Timestamp.Day).Average(s => s.Count())).ToList();
-            //.GroupBy(n => n.Mathes)
-            //       .OrderByDescending(n => n.AverageMatchesPerDay).Take(count);
-
-
             var response = db.Servers.
                 Select(p => new PopularServers
                 {
-                    AverageMatchesPerDay = p.Mathes.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp)).Average(s => s.Count()),
+                    AverageMatchesPerDay = p.Mathes.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp)).Average(s => (int?)s.Count()) ?? 0,
                     Endpoint = p.Endpoint,
                     Name = p.Name
                 })
