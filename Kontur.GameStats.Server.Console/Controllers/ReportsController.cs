@@ -33,8 +33,7 @@ namespace Kontur.GameStats.Server.Controllers
             var response = new LinkedList<RecentMath>();
             var recentMathes =
                 db.MathesResults.Include("Server")
-                .Include("ScoreBoard").Include("Map")
-                .Include("GameMode")
+                .Include("ScoreBoard").Include("GameMode")
                 .OrderByDescending(p => p.Timestamp).Take(count);
             foreach (var match in recentMathes)
             {
@@ -42,7 +41,7 @@ namespace Kontur.GameStats.Server.Controllers
                 responseRow.Server = match.Server.Endpoint;
                 responseRow.Timestamp = match.Timestamp;
                 MatchResultRequest matchResults = new MatchResultRequest();
-                matchResults.Map = match.Map.Name;
+                matchResults.Map = match.Map;
                 matchResults.GameMode = match.GameMode.Name;
                 matchResults.FragLimit = match.FragLimit;
                 matchResults.TimeLimit = match.TimeLimit;
@@ -51,7 +50,7 @@ namespace Kontur.GameStats.Server.Controllers
                 foreach (var score in match.ScoreBoard)
                 {
                     ScoreboardElement scoreElement = new ScoreboardElement();
-                    scoreElement.Name = score.Player.Name;
+                    scoreElement.Name = score.Player;
                     scoreElement.Deaths = score.Deaths;
                     scoreElement.Kills = score.Kills;
                     scoreElement.Frags = score.Frags;
@@ -95,9 +94,9 @@ namespace Kontur.GameStats.Server.Controllers
             if (count <= 0) return Ok(Enumerable.Empty<PopularServers>());
 
             if (count > 50) count = 50;
-            var players = db.Players.Include("Scores")
-                .Where(p => p.Scores.Count() >= minMathesCount && p.Scores.Sum(d => d.Deaths) > 0)
-                .Select(e => new { name = e.Name, killToDeathRatio = (double)e.Scores.Sum(k => k.Kills) / e.Scores.Sum(d => d.Deaths) });
+            var players = db.ScoreboardRecords.GroupBy(t => t.Player)
+                .Where(p => p.Count() >= minMathesCount && p.Sum(d => d.Deaths) > 0)
+                .Select(e => new { name = e.Key, killToDeathRatio = (double)e.Sum(k => k.Kills) / e.Sum(d => d.Deaths) });
             var response = players.OrderByDescending(t => t.killToDeathRatio);
             return Ok(response);
         }

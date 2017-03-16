@@ -13,7 +13,7 @@ namespace Kontur.GameStats.Server.Models
         public double TimeLimit { get; set; }
         public double TimeElapsed { get; set; }
         [Index]
-        public virtual Map Map { get; set; }
+        public string Map { get; set; }
         [Index]
         public virtual GameMode GameMode { get; set; }
         [Index]

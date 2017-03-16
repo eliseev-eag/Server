@@ -8,8 +8,6 @@ namespace Kontur.GameStats.Server.Models
         public virtual DbSet<ServerInfo> Servers { get; set; }
         public virtual DbSet<GameMode> GameModes { get; set; }
         public virtual DbSet<MatchResult> MathesResults { get; set; }
-        public virtual DbSet<Player> Players { get; set; }
-        public virtual DbSet<Map> Maps { get; set; }
         public virtual DbSet<ScoreboardRecord> ScoreboardRecords { get; set; }
 
         /*protected override void OnModelCreating(DbModelBuilder modelBuilder)

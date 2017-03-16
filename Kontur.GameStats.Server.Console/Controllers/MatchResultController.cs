@@ -1,15 +1,11 @@
-﻿using Kontur.GameStats.Server.Models;
-using Kontur.GameStats.Server.Requests;
-using Ninject.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
-
+using Ninject.Extensions.Logging;
+using Kontur.GameStats.Server.Models;
+using Kontur.GameStats.Server.Requests;
 namespace Kontur.GameStats.Server.Controllers
 {
     public class MatchResultController : ApiController
@@ -26,7 +22,7 @@ namespace Kontur.GameStats.Server.Controllers
         [HttpPut]
         [Route("servers/{endpoint}/matches/{time}")]
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> SaveServerInfo([FromUri]string endpoint, [FromUri]DateTime time, [FromBody]MatchResultRequest matchResultRequest)
+        public IHttpActionResult SaveServerInfo([FromUri]string endpoint, [FromUri]DateTime time, [FromBody]MatchResultRequest matchResultRequest)
         {
             time = time.ToUniversalTime();
             if (!ModelState.IsValid)
@@ -38,7 +34,7 @@ namespace Kontur.GameStats.Server.Controllers
             ServerInfo server;
             try
             {
-                server = await db.Servers.SingleAsync(rec => rec.Endpoint == endpoint);
+                server = db.Servers.Single(rec => rec.Endpoint == endpoint);
             }
             catch (InvalidOperationException)
             {
@@ -49,28 +45,12 @@ namespace Kontur.GameStats.Server.Controllers
             GameMode gameMode;
             try
             {
-                gameMode = await db.GameModes.SingleAsync(rec => rec.Name == matchResultRequest.GameMode);
+                gameMode = db.GameModes.Single(rec => rec.Name == matchResultRequest.GameMode);
             }
             catch (InvalidOperationException)
             {
                 logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, time);
                 return BadRequest();
-            }
-            Map map;
-            try
-            {
-                map = await db.Maps.SingleAsync(rec => rec.Name == matchResultRequest.Map);
-            }
-            catch (InvalidOperationException)
-            {
-                map = new Map();
-                map.Name = matchResultRequest.Map;
-                db.Maps.Add(map);
-                try { await db.SaveChangesAsync(); }
-                catch (DbUpdateException)
-                {
-                    map = await db.Maps.FirstAsync(m => m.Name == matchResultRequest.Map);
-                }
             }
 
             try
@@ -79,14 +59,14 @@ namespace Kontur.GameStats.Server.Controllers
                 MatchResult matchResult = new MatchResult();
                 matchResult.Server = server;
                 matchResult.Timestamp = time;
-                matchResult.Map = map;
+                matchResult.Map = matchResultRequest.Map;
                 matchResult.GameMode = gameMode;
                 matchResult.FragLimit = matchResultRequest.FragLimit;
                 matchResult.TimeLimit = matchResultRequest.TimeLimit;
                 matchResult.TimeElapsed = matchResultRequest.TimeElapsed;
-                await SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
+                SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
                 db.MathesResults.Add(matchResult);
-                await db.SaveChangesAsync();
+                db.SaveChanges();
             }
             catch (Exception exception)
             {
@@ -96,33 +76,21 @@ namespace Kontur.GameStats.Server.Controllers
             return Ok();
         }
 
-        private async Task SaveScoreboard(List<ScoreboardElement> scoreboard, MatchResult match)
+        private void SaveScoreboard(List<ScoreboardElement> scoreboard, MatchResult match)
         {
             for (int i = 0; i < scoreboard.Count; i++)
             {
 
                 var scoreboardRow = scoreboard[i];
                 ScoreboardRecord record = new ScoreboardRecord();
-                Player player;
-                try { player = await db.Players.SingleAsync(p => p.Name == scoreboardRow.Name); }
-                catch (InvalidOperationException)
-                {
-                    player = new Player() { Name = scoreboardRow.Name };
-                    player.Scores.Add(record);
-                    db.Players.Add(player);
-                }
-
                 record.Kills = scoreboardRow.Kills;
                 record.Frags = scoreboardRow.Frags;
                 record.Deaths = scoreboardRow.Deaths;
-                record.Player = player;
-                player.Scores.Add(record);
-                if (i == 0)
+                record.Player = scoreboardRow.Name;
+                if (scoreboard.Count == 1)
                     record.ScoreboardPercent = 100;
-                else if (i == scoreboard.Count - 1)
-                    record.ScoreboardPercent = 0;
                 else
-                    record.ScoreboardPercent = i / (scoreboard.Count - 1);
+                    record.ScoreboardPercent = (((double)scoreboard.Count - 1 - i) / (scoreboard.Count - 1)) * 100;
                 record.Match = match;
                 match.ScoreBoard.Add(record);
             }
@@ -131,7 +99,7 @@ namespace Kontur.GameStats.Server.Controllers
         [HttpGet]
         [Route("servers/{endpoint}/matches/{time}")]
         [ResponseType(typeof(MatchResultRequest))]
-        public async Task<IHttpActionResult> GetServerInfo([FromUri]string endpoint, [FromUri]DateTime time)
+        public IHttpActionResult GetServerInfo([FromUri]string endpoint, [FromUri]DateTime time)
         {
             time = time.ToUniversalTime();
             if (!ModelState.IsValid)
@@ -143,7 +111,7 @@ namespace Kontur.GameStats.Server.Controllers
             MatchResult match;
             try
             {
-                match = await db.MathesResults.SingleAsync(rec => rec.Server.Endpoint == endpoint && rec.Timestamp == time);
+                match = db.MathesResults.Single(rec => rec.Server.Endpoint == endpoint && rec.Timestamp == time);
             }
             catch (InvalidOperationException)
             {
@@ -159,14 +127,14 @@ namespace Kontur.GameStats.Server.Controllers
             MatchResultRequest result = new MatchResultRequest();
             result.FragLimit = match.FragLimit;
             result.GameMode = match.GameMode.Name;
-            result.Map = match.Map.Name;
+            result.Map = match.Map;
             result.TimeElapsed = match.TimeElapsed;
             result.TimeLimit = match.TimeLimit;
             result.Scoreboard = new List<ScoreboardElement>();
             foreach (var scoreboardRecord in match.ScoreBoard)
             {
                 ScoreboardElement scoreElement = new ScoreboardElement();
-                scoreElement.Name = scoreboardRecord.Player.Name;
+                scoreElement.Name = scoreboardRecord.Player;
                 scoreElement.Deaths = scoreboardRecord.Deaths;
                 scoreElement.Frags = scoreboardRecord.Frags;
                 scoreElement.Kills = scoreboardRecord.Kills;
