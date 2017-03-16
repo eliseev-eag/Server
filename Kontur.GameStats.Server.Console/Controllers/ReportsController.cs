@@ -96,8 +96,8 @@ namespace Kontur.GameStats.Server.Controllers
 
             if (count > 50) count = 50;
             var players = db.Players.Include("Scores")
-                .Where(p => p.Scores.Count() >= minMathesCount && p.Scores.Sum(d => d.Deaths) == 0)
-                .Select(e => new { name = e.Name, killToDeathRatio = e.Scores.Sum(k => k.Kills) / e.Scores.Sum(d => d.Deaths) });
+                .Where(p => p.Scores.Count() >= minMathesCount && p.Scores.Sum(d => d.Deaths) > 0)
+                .Select(e => new { name = e.Name, killToDeathRatio = (double)e.Scores.Sum(k => k.Kills) / e.Scores.Sum(d => d.Deaths) });
             var response = players.OrderByDescending(t => t.killToDeathRatio);
             return Ok(response);
         }

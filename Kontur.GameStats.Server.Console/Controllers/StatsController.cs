@@ -5,6 +5,7 @@ using System.Web.Http.Description;
 using Ninject.Extensions.Logging;
 using Kontur.GameStats.Server.Models;
 using Kontur.GameStats.Server.Responces;
+using System.Data.Entity;
 
 namespace Kontur.GameStats.Server.Controllers
 {
@@ -41,11 +42,15 @@ namespace Kontur.GameStats.Server.Controllers
             {
                 var matchesGroupByDate = matches.GroupBy(m => m.Timestamp.Date);
                 response.MaximumMatchesPerDay = matchesGroupByDate.Max(p => p.Count());
-                response.AverageMatchesPerDay = matchesGroupByDate.Average(p => p.Count());
                 response.MaximumPopulation = matches.Max(m => m.ScoreBoard.Count());
                 response.AveragePopulation = matches.Average(m => m.ScoreBoard.Count());
                 response.Top5GameModes = server.GameModes.OrderByDescending(p => p.Matches.Count()).Select(m => m.Name).Take(5);
                 response.Top5Maps = matches.GroupBy(p => p.Map).OrderByDescending(m => m.Count()).Select(n => n.Key.Name).Take(5);
+
+                var lastDay = db.MathesResults.Max(x => DbFunctions.TruncateTime(x.Timestamp));               
+                var firstDay = server.Mathes.Min(y => y.Timestamp);
+                var dayCount = (lastDay.Value.Date - firstDay.Date).Days + 1.0;
+                response.AverageMatchesPerDay = server.Mathes.Count() / dayCount;
             }
             else
             {
@@ -70,18 +75,25 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
                 return BadRequest();
             }
+
             PlayerStats response = new PlayerStats();
             response.TotalMatchesPlayed = player.Scores.Count();
             response.TotalMatchesWon = player.Scores.Count(p => p.ScoreboardPercent == 100);
-
             response.FavoriteGameMode = player.Scores.GroupBy(p => p.Match.GameMode.Name).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
             response.FavoriteServer = player.Scores.GroupBy(p => p.Match.Server.Endpoint).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
             response.MaximumMatchesPerDay = player.Scores.GroupBy(p => p.Match.Timestamp.Date).Max(p => p.Count());
             response.UniqueServers = player.Scores.GroupBy(p => p.Match.Server.Endpoint).Count();
             response.AverageScoreboardPercent = player.Scores.Average(p => p.ScoreboardPercent);
             response.LastMatchPlayed = player.Scores.Max(p => p.Match.Timestamp);
+
+            var lastDay = db.MathesResults.Max(x => DbFunctions.TruncateTime(x.Timestamp));
+            var firstDay = player.Scores.Min(y => y.Match.Timestamp);
+            var dayCount = (lastDay.Value.Date - firstDay.Date).Days + 1.0;
+            response.AverageMatchesPerDay =  player.Scores.Count() / dayCount;
+
             response.KillToDeathRatio = (double)player.Scores.Sum(k => k.Kills) / player.Scores.Sum(d => d.Deaths);
             if (double.IsInfinity(response.KillToDeathRatio)) response.KillToDeathRatio = 0;
+
             return Ok(response);
         }
     }
