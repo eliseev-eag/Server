@@ -1,14 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Data.Entity.Infrastructure;
+﻿using System;
 using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Description;
-using Kontur.GameStats.Server.Models;
-using Ninject.Extensions.Logging;
+using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.Text.RegularExpressions;
-using System;
+using Ninject.Extensions.Logging;
 using Kontur.GameStats.Server.Requests;
 using Kontur.GameStats.Server.Responces;
+using Kontur.GameStats.Server.Models;
 
 namespace Kontur.GameStats.Server.Controllers
 {
