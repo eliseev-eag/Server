@@ -66,20 +66,13 @@ namespace Kontur.GameStats.Server.Controllers
         public IHttpActionResult GetPlayersStats([FromUri]string playerName)
         {
             var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0);
-            //if (scores.Count == 0)
-            //{
-            //    logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
-            //    return BadRequest();
-            //}
 
             PlayerStats response = new PlayerStats();
             response.TotalMatchesPlayed = scores.Count();
             response.TotalMatchesWon = scores.Count(p => p.ScoreboardPercent == 100);
 
-            //scores.GroupBy(p => p.Match.GameMode.Name).OrderByDescending(n => n.Key.Count()).ToList();
-
-            //response.FavoriteGameMode = scores.GroupBy(p => p.Match.GameMode.Name).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
-            //response.FavoriteServer = scores.GroupBy(p => p.Match.Server.Endpoint).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
+            response.FavoriteGameMode = scores.GroupBy(p => p.Match.GameMode.Name).OrderByDescending(n => n.Count()).Select(x => x.Key).First();
+            response.FavoriteServer = scores.GroupBy(p => p.Match.Server.Endpoint).OrderByDescending(n => n.Count()).Select(x => x.Key).First();
             response.MaximumMatchesPerDay = scores.GroupBy(p => DbFunctions.TruncateTime(p.Match.Timestamp)).Max(p => p.Count());
             response.UniqueServers = scores.GroupBy(p => p.Match.Server.Endpoint).Count();
             response.AverageScoreboardPercent = scores.Average(p => p.ScoreboardPercent);
