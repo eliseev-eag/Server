@@ -35,9 +35,8 @@ namespace Kontur.GameStats.Server
 
         private static void RunServer(Options options)
         {
-            //using (WebApp.Start<Startup>(options.Prefix))
             using (DatabaseContext context = new DatabaseContext())
-            using (WebApp.Start<Startup>("http://localhost:12345/"))
+            using (WebApp.Start<Startup>(options.Prefix))
             {
                 context.MathesResults.FirstOrDefault();
 
