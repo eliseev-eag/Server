@@ -65,22 +65,12 @@ namespace Kontur.GameStats.Server.Controllers
         [ResponseType(typeof(PlayerStats))]
         public IHttpActionResult GetPlayersStats([FromUri]string playerName)
         {
-            var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0).ToList();
-            if (scores.Count == 0)
-            {
-                logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
-                return BadRequest();
-            }
-            //Player player;
-            /*try
-            {
-                player = db.Players.Include("Scores").Single(rec => string.Compare(rec.Name, playerName, true) == 0);
-            }
-            catch (InvalidOperationException)
-            {
-                logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
-                return BadRequest();
-            }*/
+            var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0);
+            //if (scores.Count == 0)
+            //{
+            //    logger.Info("Get запрос players/{0}/stats. Игрок с заданным ником {0} не найден", playerName);
+            //    return BadRequest();
+            //}
 
             PlayerStats response = new PlayerStats();
             response.TotalMatchesPlayed = scores.Count();
@@ -88,9 +78,9 @@ namespace Kontur.GameStats.Server.Controllers
 
             //scores.GroupBy(p => p.Match.GameMode.Name).OrderByDescending(n => n.Key.Count()).ToList();
 
-            response.FavoriteGameMode = scores.GroupBy(p => p.Match.GameMode.Name).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
-            response.FavoriteServer = scores.GroupBy(p => p.Match.Server.Endpoint).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
-            response.MaximumMatchesPerDay = scores.GroupBy(p => p.Match.Timestamp.Date).Max(p => p.Count());
+            //response.FavoriteGameMode = scores.GroupBy(p => p.Match.GameMode.Name).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
+            //response.FavoriteServer = scores.GroupBy(p => p.Match.Server.Endpoint).Select(x => x.Key).OrderByDescending(n => n.Count()).First();
+            response.MaximumMatchesPerDay = scores.GroupBy(p => DbFunctions.TruncateTime(p.Match.Timestamp)).Max(p => p.Count());
             response.UniqueServers = scores.GroupBy(p => p.Match.Server.Endpoint).Count();
             response.AverageScoreboardPercent = scores.Average(p => p.ScoreboardPercent);
             response.LastMatchPlayed = scores.Max(p => p.Match.Timestamp);
