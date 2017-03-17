@@ -76,14 +76,14 @@ namespace Kontur.GameStats.Server.Controllers
             }
             try
             {
-                ServerInfo serverInfo = db.Servers.Find(endpoint);
-                if (serverInfo == null)
-                {
-                    return NotFound();
-                }
+                ServerInfo serverInfo = db.Servers.Single(p=> p.Endpoint == endpoint);
 
                 AdvertiseRequest response = ExtractServerInfo(serverInfo);
                 return Ok(response);
+            }
+            catch (InvalidOperationException)
+            {
+                return NotFound();
             }
             catch (Exception exception)
             {
