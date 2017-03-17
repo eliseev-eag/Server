@@ -73,14 +73,16 @@ namespace Kontur.GameStats.Server.Controllers
             if (count <= 0) return Ok(Enumerable.Empty<PopularServers>());
 
             if (count > 50) count = 50;
-
-            var response = db.Servers.
-                Select(p => new PopularServers
-                {
-                    AverageMatchesPerDay = p.Mathes.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp)).Average(s => (int?)s.Count()) ?? 0,
-                    Endpoint = p.Endpoint,
-                    Name = p.Name
-                })
+            var lastDay = db.MathesResults.Max(x => DbFunctions.TruncateTime(x.Timestamp));
+            var query = from server in db.Servers
+                        let firstDay = server.Mathes.Min(y => y.Timestamp)
+                        select new PopularServers
+                        {
+                            AverageMatchesPerDay = ((double)server.Mathes.Count() / (DbFunctions.DiffDays(firstDay, lastDay) + 1.0) ?? 0.0),
+                            Endpoint = server.Endpoint,
+                            Name = server.Name
+                        };
+            var response = query
                 .OrderByDescending(n => n.AverageMatchesPerDay).Take(count);
             return Ok(response);
         }
