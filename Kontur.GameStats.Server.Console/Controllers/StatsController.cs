@@ -36,14 +36,15 @@ namespace Kontur.GameStats.Server.Controllers
                 return BadRequest();
             }
             ServerStats response = new ServerStats();
-            var matches = server.Mathes;
+            var matches = db.MathesResults.Where(p => p.Server.Id == server.Id).Include("ScoreBoard");
             response.TotalMatchesPlayed = matches.Count();
             if (response.TotalMatchesPlayed != 0)
             {
-                var matchesGroupByDate = matches.GroupBy(m => m.Timestamp.Date);
+                var matchesGroupByDate = matches.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp));
                 response.MaximumMatchesPerDay = matchesGroupByDate.Max(p => p.Count());
-                response.MaximumPopulation = matches.Max(m => m.ScoreBoard.Count());
-                response.AveragePopulation = matches.Average(m => m.ScoreBoard.Count());
+                
+                response.MaximumPopulation = matches.Select(m => m.ScoreBoard.Count()).OrderByDescending(n => n).First();
+                response.AveragePopulation = matches.Select(m => m.ScoreBoard.Count()).ToArray().Average();
                 response.Top5GameModes = server.GameModes.OrderByDescending(p => p.Matches.Count()).Select(m => m.Name).Take(5);
                 response.Top5Maps = matches.GroupBy(p => p.Map).OrderByDescending(m => m.Count()).Select(n => n.Key).Take(5);
 
@@ -65,7 +66,7 @@ namespace Kontur.GameStats.Server.Controllers
         [ResponseType(typeof(PlayerStats))]
         public IHttpActionResult GetPlayersStats([FromUri]string playerName)
         {
-            var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0);
+            var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0).Include(c=>c.Match);
 
             PlayerStats response = new PlayerStats();
             response.TotalMatchesPlayed = scores.Count();

@@ -142,7 +142,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             return result;
         }
-
+        /*
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -150,6 +150,6 @@ namespace Kontur.GameStats.Server.Controllers
                 db.Dispose();
             }
             base.Dispose(disposing);
-        }
+        }*/
     }
 }
