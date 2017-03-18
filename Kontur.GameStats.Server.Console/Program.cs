@@ -35,13 +35,20 @@ namespace Kontur.GameStats.Server
 
         private static void RunServer(Options options)
         {
-            using (DatabaseContext context = new DatabaseContext())
-            using (WebApp.Start<Startup>(options.Prefix))
+            try
             {
-                context.MathesResults.FirstOrDefault();
+                using (DatabaseContext context = new DatabaseContext())
+                using (WebApp.Start<Startup>(options.Prefix))
+                {
+                    context.MathesResults.FirstOrDefault();
 
-                logger.Info("Сервер запустился с префиксом {0}", options.Prefix);
-                Console.ReadKey();
+                    logger.Info("Сервер запустился с префиксом {0}", options.Prefix);
+                    Console.ReadKey();
+                }
+            }
+            catch(Exception exception)
+            {
+                logger.Error(exception, "Internal exception");
             }
         }
 
