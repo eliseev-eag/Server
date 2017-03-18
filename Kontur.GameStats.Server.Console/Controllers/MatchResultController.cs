@@ -22,8 +22,9 @@ namespace Kontur.GameStats.Server.Controllers
         [HttpPut]
         [Route("servers/{endpoint}/matches/{time}")]
         [ResponseType(typeof(void))]
-        public IHttpActionResult SaveServerInfo([FromUri]string endpoint, [FromUri]DateTime time, [FromBody]MatchResultRequest matchResultRequest)
+        public IHttpActionResult SaveMatchResult([FromUri]string endpoint, [FromUri]DateTime time, [FromBody]MatchResultRequest matchResultRequest)
         {
+
             time = time.ToUniversalTime();
             if (!ModelState.IsValid)
             {
@@ -41,6 +42,11 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Put запрос servers/{0}/matches/{1}. Server с заданным endpoint {0} не найден", endpoint, time);
                 return NotFound();
             }
+            catch (Exception exception)
+            {
+                logger.Error(exception, " Exception on Put servers/{0}/matches/{1} request", endpoint, time);
+                return InternalServerError();
+            }
 
             GameMode gameMode;
             try
@@ -52,10 +58,15 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Put запрос servers/{0}/matches/{1}. Не корректен GameMode", endpoint, time);
                 return BadRequest();
             }
-
+            catch (Exception exception)
+            {
+                logger.Error(exception, " Exception on Put servers/{0}/matches/{1} request", endpoint, time);
+                return InternalServerError();
+            }
             try
             {
                 logger.Info("Put запрос servers/{0}/matches/{1} добавляю запись", endpoint, time);
+
                 MatchResult matchResult = new MatchResult();
                 matchResult.Server = server;
                 matchResult.Timestamp = time;
@@ -64,15 +75,18 @@ namespace Kontur.GameStats.Server.Controllers
                 matchResult.FragLimit = matchResultRequest.FragLimit;
                 matchResult.TimeLimit = matchResultRequest.TimeLimit;
                 matchResult.TimeElapsed = matchResultRequest.TimeElapsed;
+
                 SaveScoreboard(matchResultRequest.Scoreboard, matchResult);
+
                 db.MathesResults.Add(matchResult);
                 db.SaveChanges();
             }
             catch (Exception exception)
             {
-                logger.Error(exception, " Exception в Put запросе servers/{0}/info", endpoint);
+                logger.Error(exception, " Exception on Put servers/{0}/matches/{1} request", endpoint,time);
                 return InternalServerError();
             }
+
             return Ok();
         }
 
@@ -99,7 +113,7 @@ namespace Kontur.GameStats.Server.Controllers
         [HttpGet]
         [Route("servers/{endpoint}/matches/{time}")]
         [ResponseType(typeof(MatchResultRequest))]
-        public IHttpActionResult GetServerInfo([FromUri]string endpoint, [FromUri]DateTime time)
+        public IHttpActionResult GetMatchResult([FromUri]string endpoint, [FromUri]DateTime time)
         {
             time = time.ToUniversalTime();
             if (!ModelState.IsValid)
@@ -118,8 +132,21 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Get запрос servers/{0}/matches/{1}. Match с заданным endpoint {0} и timestamp {1} не найден", endpoint, time);
                 return BadRequest();
             }
-            MatchResultRequest response = ExtractMatchResultsRequest(match);
-            return Ok(response);
+            catch (Exception exception)
+            {
+                logger.Error(exception, " Exception on Get servers/{0}/matches/{1} request", endpoint, time);
+                return InternalServerError();
+            }
+            try
+            {
+                MatchResultRequest response = ExtractMatchResultsRequest(match);
+                return Ok(response);
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception, " Exception on Get servers/{0}/matches/{1} request", endpoint, time);
+                return InternalServerError();
+            }
         }
 
         private MatchResultRequest ExtractMatchResultsRequest(MatchResult match)
@@ -142,7 +169,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             return result;
         }
-        /*
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -150,6 +177,6 @@ namespace Kontur.GameStats.Server.Controllers
                 db.Dispose();
             }
             base.Dispose(disposing);
-        }*/
+        }
     }
 }

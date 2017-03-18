@@ -33,9 +33,7 @@ namespace Kontur.GameStats.Server.Controllers
         [ResponseType(typeof(ICollection<GeneralServerInformation>))]
         public IHttpActionResult GetServerInfos()
         {
-            logger.Info("GET запрос servers/info принят");
             ICollection<GeneralServerInformation> response = new LinkedList<GeneralServerInformation>();
-
             try
             {
                 var serverInfoesCollection = db.Servers.Include("GameModes").ToList();
@@ -51,7 +49,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.Error(exception, "Exception в Put запросе servers/info");
+                logger.Error(exception, "Exception on Get servers/info request");
                 return InternalServerError();
             }
         }
@@ -87,7 +85,7 @@ namespace Kontur.GameStats.Server.Controllers
             }
             catch (Exception exception)
             {
-                logger.Error(exception, "Exception в Put запросе servers/{0}/info", endpoint);
+                logger.Error(exception, "Exception on Get servers/{0}/info request", endpoint);
                 return InternalServerError();
             }
         }
@@ -123,12 +121,10 @@ namespace Kontur.GameStats.Server.Controllers
             {
                 if (!ServerInfoExists(endpoint))
                 {
-                    logger.Info("Put запрос servers/{0}/info добавляю запись", endpoint);
                     AddServerInfo(endpoint, advertiseRequest);
                 }
                 else
                 {
-                    logger.Info("Put запрос servers/{0}/info обновляю запись ", endpoint);
                     UpdateServerInfo(endpoint, advertiseRequest);
                 }
 
@@ -149,7 +145,7 @@ namespace Kontur.GameStats.Server.Controllers
 
             catch (Exception exception)
             {
-                logger.Error(exception, "Excetion в Put запросе servers/{0}/info", endpoint);
+                logger.Error(exception, "Exception on Put servers/{0}/info request", endpoint);
                 return InternalServerError();
             }
 

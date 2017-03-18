@@ -35,6 +35,26 @@ namespace Kontur.GameStats.Server.Controllers
                 logger.Info("Get запрос servers/{0}/stats. Сервер с заданным endpoint {0} не найден", endpoint);
                 return BadRequest();
             }
+            catch (Exception exception)
+            {
+                logger.Error(exception, "Exception on servers/{0}/stats request", endpoint);
+                return InternalServerError();
+            }
+
+            try
+            {
+                ServerStats response = ExtractServerStats(server);
+                return Ok(response);
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception, "Exception on servers/{0}/stats request", endpoint);
+                return InternalServerError();
+            }
+        }
+
+        private ServerStats ExtractServerStats(ServerInfo server)
+        {
             ServerStats response = new ServerStats();
             var matches = db.MathesResults.Where(p => p.Server.Id == server.Id).Include("ScoreBoard");
             response.TotalMatchesPlayed = matches.Count();
@@ -42,7 +62,7 @@ namespace Kontur.GameStats.Server.Controllers
             {
                 var matchesGroupByDate = matches.GroupBy(m => DbFunctions.TruncateTime(m.Timestamp));
                 response.MaximumMatchesPerDay = matchesGroupByDate.Max(p => p.Count());
-                
+
                 response.MaximumPopulation = matches.Select(m => m.ScoreBoard.Count()).OrderByDescending(n => n).First();
                 response.AveragePopulation = matches.Select(m => m.ScoreBoard.Count()).ToArray().Average();
                 response.Top5GameModes = server.GameModes.OrderByDescending(p => p.Matches.Count()).Select(m => m.Name).Take(5);
@@ -58,7 +78,8 @@ namespace Kontur.GameStats.Server.Controllers
                 response.Top5GameModes = Enumerable.Empty<string>();
                 response.Top5Maps = Enumerable.Empty<string>();
             }
-            return Ok(response);
+
+            return response;
         }
 
         [HttpGet]
@@ -66,8 +87,22 @@ namespace Kontur.GameStats.Server.Controllers
         [ResponseType(typeof(PlayerStats))]
         public IHttpActionResult GetPlayersStats([FromUri]string playerName)
         {
-            var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0).Include(c=>c.Match);
+            try
+            {
+                var scores = db.ScoreboardRecords.Where(p => string.Compare(p.Player, playerName, true) == 0).Include(c => c.Match);
+                PlayerStats response = ExtractPlayerStats(scores);
 
+                return Ok(response);
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception, "Exception on players/{0}/stats request", playerName);
+                return InternalServerError();
+            }
+        }
+
+        private PlayerStats ExtractPlayerStats(IQueryable<ScoreboardRecord> scores)
+        {
             PlayerStats response = new PlayerStats();
             response.TotalMatchesPlayed = scores.Count();
             response.TotalMatchesWon = scores.Count(p => p.ScoreboardPercent == 100);
@@ -86,8 +121,16 @@ namespace Kontur.GameStats.Server.Controllers
 
             response.KillToDeathRatio = (double)scores.Sum(k => k.Kills) / scores.Sum(d => d.Deaths);
             if (double.IsInfinity(response.KillToDeathRatio)) response.KillToDeathRatio = 0;
+            return response;
+        }
 
-            return Ok(response);
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
