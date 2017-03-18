@@ -43,6 +43,7 @@ namespace Kontur.GameStats.Server
                     context.MathesResults.FirstOrDefault();
 
                     logger.Info("Сервер запустился с префиксом {0}", options.Prefix);
+                    logger.Info("Нажмите любую кнопку для завершения");
                     Console.ReadKey();
                 }
             }
