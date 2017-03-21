@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace Kontur.GameStats.Server.Requests
 {
@@ -13,5 +14,13 @@ namespace Kontur.GameStats.Server.Requests
         [Required]
         [JsonProperty(PropertyName = "gameModes")]
         public List<string> GameModes { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            var inform = obj as AdvertiseRequest;
+            if (inform == null) return false;
+            return Name == inform.Name
+                && GameModes.OrderBy(i => i).SequenceEqual(GameModes.OrderBy(i => i));
+        }
     }
 }
