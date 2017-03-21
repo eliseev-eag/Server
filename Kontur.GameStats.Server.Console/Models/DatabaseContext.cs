@@ -4,7 +4,7 @@ namespace Kontur.GameStats.Server.Models
 {
     public class DatabaseContext : DbContext
     {
-        public DatabaseContext() : base("name = DatabaseContext") { }
+        public DatabaseContext(string connectionsStringName = "name = DatabaseContext") : base(connectionsStringName) { }
         public virtual DbSet<ServerInfo> Servers { get; set; }
         public virtual DbSet<GameMode> GameModes { get; set; }
         public virtual DbSet<MatchResult> MathesResults { get; set; }
