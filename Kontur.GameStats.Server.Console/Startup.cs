@@ -1,10 +1,13 @@
-﻿using Ninject;
+﻿using Microsoft.Owin;
+using Ninject;
 using Ninject.Web.Common.OwinHost;
 using Ninject.Web.WebApi.OwinHost;
 using Owin;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Web.Http;
+
+[assembly: OwinStartup(typeof(Kontur.GameStats.Server.Startup))]
 
 namespace Kontur.GameStats.Server
 {
